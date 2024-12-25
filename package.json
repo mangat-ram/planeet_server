@@ -1,0 +1,27 @@
+{
+  "name": "planeet_server",
+  "module": "index.ts",
+  "type": "module",
+  "scripts": {
+    "dev": "bun src/index.ts"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@types/jsonwebtoken": "^9.0.7"
+  },
+  "peerDependencies": {
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "bcrypt": "^5.1.1",
+    "crypto": "^1.0.1",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "ioredis": "^5.4.2",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.9.2",
+    "mongoose-keywords": "^0.4.1",
+    "prettier": "^3.4.2",
+    "semver": "^7.6.3"
+  }
+}
