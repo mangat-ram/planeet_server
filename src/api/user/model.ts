@@ -25,6 +25,7 @@ export interface IUser extends Document {
     phoneNumber: string;
     email: string;
     password: string;
+    verifyCode: string;
     isVerified: boolean;
     avatar?: string;
     createdAt: Date;

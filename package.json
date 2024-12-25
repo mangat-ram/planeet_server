@@ -27,6 +27,7 @@
     "express": "^4.21.2",
     "ioredis": "^5.4.2",
     "jest": "^29.7.0",
+    "joi": "^17.13.3",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.9.2",
     "mongoose-keywords": "^0.4.1",
