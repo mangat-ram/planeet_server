@@ -145,13 +145,13 @@ userSchema.methods.comparePassword = async function(candidatePassword: string) {
 userSchema.methods.generateAccessToken = function() {
     return sign(
         {
-        _id: this._id,
-        email: this.email,
-        userName: this.username,
+            _id: this._id,
+            email: this.email,
+            userName: this.username,
         },
         process.env.ACCESS_TOKEN_SECRET as string,
         {
-        expiresIn: process.env.ACCESS_TOKEN_EXPIRY
+            expiresIn: process.env.ACCESS_TOKEN_EXPIRY
         }
     );
 }
@@ -160,11 +160,11 @@ userSchema.methods.generateAccessToken = function() {
 userSchema.methods.generateRefreshToken = function() {
     return sign(
     {
-      _id: this._id,
+        _id: this._id,
     },
     process.env.REFRESH_TOKEN_SECRET as string,
     {
-      expiresIn: process.env.REFRESH_TOKEN_EXPIRY
+        expiresIn: process.env.REFRESH_TOKEN_EXPIRY
     }
   );
 }
