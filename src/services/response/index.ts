@@ -3,6 +3,8 @@ interface IApiResponse {
   data: any;
   message: string;
   success: boolean;
+  accessToken?: string;
+  refreshToken?: string;
 }
 
 export function successResponse (

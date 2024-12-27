@@ -1,6 +1,6 @@
 import app from "./app";
 import dotenv from "dotenv";
-import connect from "./services/database";
+import connect from "./services/mongoDB";
 
 dotenv.config({ path: "./.env" });
 

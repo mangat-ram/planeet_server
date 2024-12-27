@@ -1,8 +1,8 @@
-import express from "express";
+import express, { type Application } from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 
-const app = express();
+const app: Application = express();
 
 app.use(cors({ origin: process.env.CORS, credentials: true }));
 app.use(express.json({ limit: "16kb" }));

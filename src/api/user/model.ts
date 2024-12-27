@@ -7,7 +7,7 @@ import mongoose,{
     Types
 } from "mongoose";
 import { sign } from "jsonwebtoken";
-import searchable from 'mongoose-searchable';
+import searchable from "mongoose-searchable";
 
 //Define User Roles
 export const roles = ['user', 'admin', 'superAdmin'] as const;
@@ -35,6 +35,8 @@ export interface IUser extends Document {
     tasks: Types.ObjectId[];
     completedTasksCount: number;
     notificationsEnabled: boolean;
+    accessToken?: string;
+    refreshToken?: string;
 }
 
 // User methods interface
@@ -93,6 +95,10 @@ const userSchema = new Schema<IUser, UserModel, IUserMethods>(
             minlength: 6,
             maxlength: 1024
         },
+        verifyCode: {
+            type: String,
+            required: true
+        },
         isVerified: {
             type: Boolean,
             default: false
@@ -121,9 +127,15 @@ const userSchema = new Schema<IUser, UserModel, IUserMethods>(
         notificationsEnabled: {
             type: Boolean,
             default: true
+        },
+        accessToken: {
+            type: String,
+        }, 
+        refreshToken: {
+            type: String,
         }
-    }, 
-  { timestamps: true }
+    },
+    { timestamps: true }
 );
 
 //Create Indexes at createdAt and updatedAt Fields
@@ -132,7 +144,7 @@ userSchema.index({ createdAt: 1, updatedAt: 1, username: 1, email: 1, phoneNumbe
 // Method to check whether password is modified or not, if not hash the password
 userSchema.pre<UserDoc>('save', async function(next) {
     if (!this.isModified('password')) return next();
-    const salt = await crypto.randomBytes(8).toString('hex');
+    await crypto.randomBytes(8).toString('hex');
     this.password = await bcrypt.hash(this.password, 10);
     next();
 });

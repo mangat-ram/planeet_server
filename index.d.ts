@@ -1,1 +1,1 @@
-declare module "mongoose-searchable"
+declare module "mongoose-searchable";
