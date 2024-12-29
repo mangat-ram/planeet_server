@@ -1,4 +1,3 @@
-import crypto from "crypto";
 import bcrypt from "bcrypt";
 import mongoose,{
     Schema,
@@ -8,6 +7,14 @@ import mongoose,{
 } from "mongoose";
 import { sign } from "jsonwebtoken";
 import searchable from "mongoose-searchable";
+import { 
+    accessTokenExpiry, 
+    accessTokenSecret, 
+    refreshTokenExpiry, 
+    refreshTokenSecret,
+    saltRounds
+} from "../../config";
+
 
 //Define User Roles
 export const roles = ['user', 'admin', 'superAdmin'] as const;
@@ -25,7 +32,9 @@ export interface IUser extends Document {
     phoneNumber: string;
     email: string;
     password: string;
+    passwordSetDate: Date;
     verifyCode: string;
+    nanoId: string;
     isVerified: boolean;
     avatar?: string;
     createdAt: Date;
@@ -95,9 +104,16 @@ const userSchema = new Schema<IUser, UserModel, IUserMethods>(
             minlength: 6,
             maxlength: 1024
         },
+        passwordSetDate: {
+            type: Date,
+            default: null
+        },
         verifyCode: {
             type: String,
             required: true
+        },
+        nanoId: {
+            type: String,
         },
         isVerified: {
             type: Boolean,
@@ -142,11 +158,17 @@ const userSchema = new Schema<IUser, UserModel, IUserMethods>(
 userSchema.index({ createdAt: 1, updatedAt: 1, username: 1, email: 1, phoneNumber: 1 });
 
 // Method to check whether password is modified or not, if not hash the password
-userSchema.pre<UserDoc>('save', async function(next) {
+userSchema.pre<UserDoc>('save', async function (next) {
     if (!this.isModified('password')) return next();
-    await crypto.randomBytes(8).toString('hex');
-    this.password = await bcrypt.hash(this.password, 10);
-    next();
+    try {
+        if (this.password) {
+            const hash = await bcrypt.hash(this.password, saltRounds);
+            this.password = hash;
+            this.passwordSetDate = new Date();
+        }
+    } catch (error: any) {
+        return next(new Error(error.message));
+    }
 });
 
 //Method to check password is correct or not
@@ -162,9 +184,9 @@ userSchema.methods.generateAccessToken = function() {
             email: this.email,
             userName: this.username,
         },
-        process.env.ACCESS_TOKEN_SECRET as string,
+        accessTokenSecret as string,
         {
-            expiresIn: process.env.ACCESS_TOKEN_EXPIRY
+            expiresIn: accessTokenExpiry
         }
     );
 }
@@ -175,9 +197,9 @@ userSchema.methods.generateRefreshToken = function() {
     {
         _id: this._id,
     },
-    process.env.REFRESH_TOKEN_SECRET as string,
+    refreshTokenSecret as string,
     {
-        expiresIn: process.env.REFRESH_TOKEN_EXPIRY
+        expiresIn: refreshTokenExpiry
     }
   );
 }

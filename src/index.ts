@@ -1,17 +1,23 @@
 import app from "./app";
-import dotenv from "dotenv";
 import connect from "./services/mongoDB";
-
-dotenv.config({ path: "./.env" });
-
-const PORT = process.env.PORT || 8000;
+import { createRedisClient } from "./services/redis";
+import {
+  port
+} from "./config";
 
 connect()
   .then(() => {
-    app.listen(PORT, () => {
-      console.log(`Server is running on port ${PORT}`);
-    });
+    try {
+      createRedisClient();
+      app.listen(port, () => {
+        console.log(`Server is running on port ${port}`);
+      });
+    } catch (error) {
+      console.error("Error creating Redis client:", error);
+      process.exit(1); // Exit if Redis client could not be created
+    }
   })
   .catch((error) => {
     console.error("Error connecting to MongoDB: ", error);
+    process.exit(1); // Exit if MongoDB connection fails
   });

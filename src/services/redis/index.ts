@@ -1,4 +1,5 @@
 import Redis from "ioredis";
+import { redisUri } from "../../config";
 
 let redis: Redis | null = null;
 
