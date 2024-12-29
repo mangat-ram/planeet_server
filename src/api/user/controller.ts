@@ -2,29 +2,11 @@ import { successResponse, errorResponse } from "../../services/response";
 import type { RequestHandler } from "express";
 import { joiUser } from "../../services/joi";
 import { sendMail } from "../../services/nodemailer";
-import User from "./model";
 import { Types } from "mongoose";
-import { customAlphabet } from "nanoid";
 import { getRedisClient } from "../../services/redis";
 import { CustomRequest } from "../../services/jwt";
-
-const chars = '0123456789abcdefghijklmnopqrstuvwxyz';
-const generateNanoId = customAlphabet(chars, 12);
-
-// Helper function to create a unique random ID for Redis
-const createRandomId = async () => {
-  const redis = getRedisClient();
-  let exists = true;
-  let result;
-  
-  while (exists) {
-    result = generateNanoId();
-    const id = await redis.get(`emailId::${result}`);
-    exists = !!id;  // Keep checking until the ID is unique
-  }
-
-  return result;  // Return the unique random ID once found
-}
+import { createRandomId } from "../../services/redis";
+import User from "./model";
 
 // Helper function to generate access and refresh tokens
 const generateAccessAndRefreshToken = async (userId: Types.ObjectId) => {
@@ -90,7 +72,7 @@ const create: RequestHandler = async (req, res): Promise<void> => {
       }
     );
 
-    res.status(201).json(successResponse(201, result, "User created successfully. Please verify your email"));
+    res.status(201).json(successResponse(201, result, "user created successfully. Please verify your email"));
   } catch (error: any) {
     res.status(400).json(errorResponse(400, error.message));
   }
@@ -102,13 +84,15 @@ const showMe: RequestHandler = async (req: CustomRequest, res): Promise<void> =>
   try {
     const { user } = req.user;
     if (!user) {
-      res.status(401).json(errorResponse(401, "Unauthorized"));
+      res.status(401).json(errorResponse(401, "unauthorized"));
     }
 
-    const emailId = await createRandomId();  // Create unique random ID for email
-    await redis.setex(`emailId::${emailId}`, 3600, user.email); // Cache with 1 hour expiration
+    // Create unique random ID for email
+    const emailId = await createRandomId(); 
+    // Cache with 1 hour expiration
+    await redis.setex(`emailId::${emailId}`, 3600, user.email); 
 
-    res.status(200).json(successResponse(200, user, "User data retrieved successfully"));
+    res.status(200).json(successResponse(200, user, "current user retrieved successfully"));
   } catch (error: any) {
     res.status(500).json(errorResponse(500, error.message));
   }
@@ -140,7 +124,9 @@ const login: RequestHandler = async (req, res): Promise<void> => {
     }
 
     const { accessToken, refreshToken } = await generateAccessAndRefreshToken(user._id);
-    const loggedUser = await User.findById(user._id).select("-password -refreshToken -__v -verifyCode");
+    const loggedUser = await User
+      .findById(user._id)
+      .select("-password -refreshToken -__v -verifyCode");
 
     const options = {
       httpOnly: true,

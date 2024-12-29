@@ -1,9 +1,7 @@
 import app from "./app";
 import connect from "./services/mongoDB";
 import { createRedisClient } from "./services/redis";
-import {
-  port
-} from "./config";
+import { port } from "./config";
 
 connect()
   .then(() => {

@@ -1,5 +1,5 @@
 import Redis from "ioredis";
-import { redisUri } from "../../config";
+import { customAlphabet } from "nanoid";
 
 let redis: Redis | null = null;
 
@@ -11,7 +11,7 @@ let redis: Redis | null = null;
 export const createRedisClient = (): Redis | undefined => {
   if (redis) {
       return redis
-  }
+  };
   try {
     redis = new Redis();
     redis.on("error", (error) => {
@@ -93,4 +93,24 @@ export const deleteKeyPairsRedis = async (pattern: string): Promise<void> => {
       reject(error);
     });
   });   
+}
+
+/**
+ * Generates a unique random ID for email verification.
+ * @returns {Promise<string>} A promise that resolves with the unique random ID.
+ */
+export const createRandomId = async (): Promise<string> => {
+  const chars = '0123456789abcdefghijklmnopqrstuvwxyz';
+  const generateNanoId = customAlphabet(chars, 12);
+  const redisClient = getRedisClient();
+  let exists = true;
+  let result;
+  
+  while (exists) {
+    result = generateNanoId();
+    const id = await redisClient.get(`emailId::${result}`);
+    // Keep checking until the ID is unique
+    exists = !!id;
+  }
+  return result as string;  // Return the unique random ID once found
 }

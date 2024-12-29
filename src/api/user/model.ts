@@ -194,14 +194,14 @@ userSchema.methods.generateAccessToken = function() {
 //Method to generate refresh token
 userSchema.methods.generateRefreshToken = function() {
     return sign(
-    {
-        _id: this._id,
-    },
-    refreshTokenSecret as string,
-    {
-        expiresIn: refreshTokenExpiry
-    }
-  );
+        {
+            _id: this._id,
+        },
+        refreshTokenSecret as string,
+        {
+            expiresIn: refreshTokenExpiry
+        }
+    );
 }
 
 //Update user when project is created

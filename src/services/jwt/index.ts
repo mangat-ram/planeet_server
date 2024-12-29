@@ -31,14 +31,16 @@ export const verifyJWT:RequestHandler = async (req:CustomRequest,res,next) => {
     const token = req.cookies?.accessToken || req.header("Authorization")?.replace("Bearer ","");
 
     if(!token){
-      res.status(401).json(errorResponse(401,"Unauthorized!"))
+      res.status(401).json(errorResponse(401,"unauthorized!,no token found!"))
+      return;
     }
 
     const decodedToken = jwt.verify(token, accessTokenSecret) as any;
     const user = await User.findById(decodedToken?._id).select("-passWord -refreshToken")
 
     if(!user){
-      res.status(401).json(errorResponse(401,"Unauthorized!"))
+      res.status(404).json(errorResponse(404,"user not found!"))
+      return;
     }
 
     req.user = user;
