@@ -2,31 +2,15 @@ import { successResponse, errorResponse } from "../../services/response";
 import type { RequestHandler } from "express";
 import { joiUser } from "../../services/joi";
 import { sendMail } from "../../services/nodemailer";
-import { Types } from "mongoose";
 import { getRedisClient } from "../../services/redis";
 import { CustomRequest } from "../../services/jwt";
 import { createRandomId } from "../../services/redis";
 import User from "./model";
-
-// Helper function to generate access and refresh tokens
-const generateAccessAndRefreshToken = async (userId: Types.ObjectId) => {
-  try {
-    const user = await User.findById(userId);
-    if (!user) {
-      return errorResponse(404, "User not found");
-    }
-
-    const accessToken = user.generateAccessToken();
-    const refreshToken = user.generateRefreshToken();
-
-    user.refreshToken = refreshToken;
-    await user.save({ validateBeforeSave: false }); // Save without running validations
-
-    return { accessToken, refreshToken };
-  } catch (err: any) {
-    return errorResponse(500, err.message);
-  }
-}
+import { 
+  verifyOTP,
+  generateAccessAndRefreshToken, 
+  isUsernameUnique 
+} from "../../../utils";
 
 // Create user route
 const create: RequestHandler = async (req, res): Promise<void> => {
@@ -98,12 +82,6 @@ const showMe: RequestHandler = async (req: CustomRequest, res): Promise<void> =>
   }
 }
 
-const currentUser:RequestHandler = async(req:CustomRequest, res) => {
-  res
-  .status(200)
-  .json(successResponse(200,req.user,"Current User Fetched Successfully."))
-}
-
 const login: RequestHandler = async (req, res): Promise<void> => {
   try {
     const { email, password } = req.body;
@@ -172,10 +150,55 @@ const logout:RequestHandler = async(req:CustomRequest,res) => {
   }
 }
 
+const verify: RequestHandler = async (req, res) => {
+  try {
+    const { emailId, otp } = req.body;
+    const redis = getRedisClient();
+    const email = await redis.get(`emailId::${emailId}`);
+    
+    if (!email) {
+      res.status(400).json(errorResponse(400, "Invalid or expired emailId"));
+      return;
+    }
+
+    const user = await User.findOne({ email });
+    if (!user) {
+      res.status(404).json(errorResponse(404, "User not found"));
+      return;
+    }
+
+    const result = await verifyOTP(emailId, otp);
+    if (result.statusCode === 200) {
+      user.isVerified = true;
+      await user.save();
+    }
+
+    res.status(result.statusCode).json(result);
+  } catch (error: any) {
+    res.status(500).json(errorResponse(500, error.message));
+  }
+}
+
+const unique: RequestHandler = async (req, res) => {
+  try {
+    const { username } = req.body;
+    const isUnique = await isUsernameUnique(username);
+    if (!isUnique) {
+      res.status(400).json(errorResponse(400, "notUnique"));
+      return;
+    }
+    res.status(200).json(successResponse(200, null, "unique"));
+  }catch(error: any) {
+    res.status(500).json(errorResponse(500, error.message));
+  }
+}
+
+
 export {
   create,
   showMe,
   login,
-  currentUser,
-  logout
+  logout,
+  verify,
+  unique
 }
