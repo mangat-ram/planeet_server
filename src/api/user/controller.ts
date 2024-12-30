@@ -62,21 +62,45 @@ const create: RequestHandler = async (req, res): Promise<void> => {
   }
 }
 
-// Show user details route
-const showMe: RequestHandler = async (req: CustomRequest, res): Promise<void> => {
-  const redis = getRedisClient();
+// Check if username is unique
+const unique: RequestHandler = async (req, res) => {
   try {
-    const { user } = req.user;
-    if (!user) {
-      res.status(401).json(errorResponse(401, "unauthorized"));
+    const { username } = req.body;
+    const isUnique = await isUsernameUnique(username);
+    if (!isUnique) {
+      res.status(400).json(errorResponse(400, "notUnique"));
+      return;
+    }
+    res.status(200).json(successResponse(200, null, "unique"));
+  }catch(error: any) {
+    res.status(500).json(errorResponse(500, error.message));
+  }
+}
+
+const verify: RequestHandler = async (req, res) => {
+  try {
+    const { emailId, otp } = req.body;
+    const redis = getRedisClient();
+    const email = await redis.get(`emailId::${emailId}`);
+    
+    if (!email) {
+      res.status(400).json(errorResponse(400, "Invalid or expired emailId"));
+      return;
     }
 
-    // Create unique random ID for email
-    const emailId = await createRandomId(); 
-    // Cache with 1 hour expiration
-    await redis.setex(`emailId::${emailId}`, 3600, user.email); 
+    const user = await User.findOne({ email });
+    if (!user) {
+      res.status(404).json(errorResponse(404, "User not found"));
+      return;
+    }
 
-    res.status(200).json(successResponse(200, user, "current user retrieved successfully"));
+    const result = await verifyOTP(emailId, otp);
+    if (result.statusCode === 200) {
+      user.isVerified = true;
+      await user.save();
+    }
+
+    res.status(result.statusCode).json(result);
   } catch (error: any) {
     res.status(500).json(errorResponse(500, error.message));
   }
@@ -120,6 +144,57 @@ const login: RequestHandler = async (req, res): Promise<void> => {
     res.status(500).json(errorResponse(500, error.message));
   }
 }
+// Show user details route
+const showMe: RequestHandler = async (req: CustomRequest, res): Promise<void> => {
+  const redis = getRedisClient();
+  try {
+    const { user } = req.user;
+    if (!user) {
+      res.status(401).json(errorResponse(401, "unauthorized"));
+    }
+
+    // Create unique random ID for email
+    const emailId = await createRandomId(); 
+    // Cache with 1 hour expiration
+    await redis.setex(`emailId::${emailId}`, 3600, user.email); 
+
+    res.status(200).json(successResponse(200, user, "current user retrieved successfully"));
+  } catch (error: any) {
+    res.status(500).json(errorResponse(500, error.message));
+  }
+}
+
+const update: RequestHandler = async (req: CustomRequest, res) => {
+  try {
+    const { user } = req.user;
+    if (!user) {
+      res.status(401).json(errorResponse(401, "unauthorized"));
+      return;
+    }
+
+    const { error, value } = joiUser.validate(req.body, { presence: "optional" });
+    if (error) {
+      const errorMessage = error.details.map((error) => error.message).join(", ");
+      res.status(400).json(errorResponse(400, errorMessage));
+      return;
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(
+      user._id,
+      { $set: value },
+      { new: true }
+    );
+
+    if (!updatedUser) {
+      res.status(404).json(errorResponse(404, "User not found"));
+      return;
+    }
+
+    res.status(200).json(successResponse(200, updatedUser, "user updated successfully"));
+  } catch (error: any) {
+    res.status(500).json(errorResponse(500, error.message));
+  }
+}
 
 const logout:RequestHandler = async(req:CustomRequest,res) => {
   try {
@@ -150,55 +225,12 @@ const logout:RequestHandler = async(req:CustomRequest,res) => {
   }
 }
 
-const verify: RequestHandler = async (req, res) => {
-  try {
-    const { emailId, otp } = req.body;
-    const redis = getRedisClient();
-    const email = await redis.get(`emailId::${emailId}`);
-    
-    if (!email) {
-      res.status(400).json(errorResponse(400, "Invalid or expired emailId"));
-      return;
-    }
-
-    const user = await User.findOne({ email });
-    if (!user) {
-      res.status(404).json(errorResponse(404, "User not found"));
-      return;
-    }
-
-    const result = await verifyOTP(emailId, otp);
-    if (result.statusCode === 200) {
-      user.isVerified = true;
-      await user.save();
-    }
-
-    res.status(result.statusCode).json(result);
-  } catch (error: any) {
-    res.status(500).json(errorResponse(500, error.message));
-  }
-}
-
-const unique: RequestHandler = async (req, res) => {
-  try {
-    const { username } = req.body;
-    const isUnique = await isUsernameUnique(username);
-    if (!isUnique) {
-      res.status(400).json(errorResponse(400, "notUnique"));
-      return;
-    }
-    res.status(200).json(successResponse(200, null, "unique"));
-  }catch(error: any) {
-    res.status(500).json(errorResponse(500, error.message));
-  }
-}
-
-
 export {
+  unique,
   create,
+  verify,
   showMe,
   login,
-  logout,
-  verify,
-  unique
+  update,
+  logout
 }

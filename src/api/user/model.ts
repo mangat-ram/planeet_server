@@ -12,7 +12,7 @@ import {
     accessTokenSecret, 
     refreshTokenExpiry, 
     refreshTokenSecret,
-    saltRounds
+    getBcryptRoundsFromEnv
 } from "../../config";
 
 
@@ -162,6 +162,7 @@ userSchema.pre<UserDoc>('save', async function (next) {
     if (!this.isModified('password')) return next();
     try {
         if (this.password) {
+            const saltRounds = getBcryptRoundsFromEnv();
             const hash = await bcrypt.hash(this.password, saltRounds);
             this.password = hash;
             this.passwordSetDate = new Date();
@@ -173,7 +174,18 @@ userSchema.pre<UserDoc>('save', async function (next) {
 
 //Method to check password is correct or not
 userSchema.methods.comparePassword = async function(candidatePassword: string) {
-    return await bcrypt.compare(candidatePassword, this.password);
+    const valid = await bcrypt.compare(candidatePassword, this.password);
+    if(valid) {
+        const currentRounds = await bcrypt.getRounds(this.password);
+        const rounds = getBcryptRoundsFromEnv();
+        if(currentRounds !== rounds) {
+            const hash = await bcrypt.hash(candidatePassword, rounds);
+            this.password = hash;
+            await this.save();
+        }
+        return true;
+    }
+    return false;
 };
 
 //Method to generate access token

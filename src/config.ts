@@ -20,4 +20,12 @@ export const refreshTokenExpiry = requireProcessEnv("REFRESH_TOKEN_EXPIRY");
 export const redisUri = requireProcessEnv("REDIS_URI");
 export const emailUser = requireProcessEnv("EMAIL_USER");
 export const emailPassword = requireProcessEnv("EMAIL_PASS");
-export const saltRounds = parseInt(requireProcessEnv("SALT_ROUNDS"), 10);
+const saltRounds = requireProcessEnv("SALT_ROUNDS");
+
+export const getBcryptRoundsFromEnv = (): number => {
+  const parsed = parseInt(saltRounds  || "10", 10);
+  if (Number.isNaN(parsed) || parsed < 10) {
+    return 10;
+  }
+  return parsed;
+};
